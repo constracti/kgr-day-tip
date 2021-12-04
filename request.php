@@ -67,6 +67,16 @@ final class KGRDTR {
 		return $var;
 	}
 
+	private static function request_post( string $method, string $key ): WP_Post|null {
+		$var = self::request_int( $method, $key );
+		if ( is_null( $var ) )
+			return NULL;
+		$var = get_post( $var );
+		if ( is_null( $var ) )
+			exit( $key );
+		return $var;
+	}
+
 	// GET
 
 	public static function get_str( string $key, bool $nullable = FALSE ): string|null {
@@ -85,6 +95,15 @@ final class KGRDTR {
 
 	public static function get_word( string $key, bool $nullable = FALSE ): string|null {
 		$var = self::request_word( 'GET', $key );
+		if ( !is_null( $var ) || $nullable )
+			return $var;
+		exit( $key );
+	}
+
+	public static function get_post( string|null $key = NULL, bool $nullable = FALSE ): WP_Post|null {
+		if ( is_null( $key ) )
+			$key = 'post';
+		$var = self::request_post( 'GET', $key );
 		if ( !is_null( $var ) || $nullable )
 			return $var;
 		exit( $key );

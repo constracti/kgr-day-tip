@@ -6,7 +6,7 @@
  * Description: Filters posts of specific tags by the current day.
  * Version: 0.1
  * Requires at least: ?
- * Requires PHP: 7.0
+ * Requires PHP: 8.0
  * Author: constracti
  * Author URI: https://github.com/constracti
  * License: GPLv3
@@ -86,6 +86,22 @@ final class KGRDT {
 			update_option( 'kgr_day_tip_terms', $terms );
 		else
 			delete_option( 'kgr_day_tip_terms' );
+	}
+
+	// post dates
+
+	public static function get_post_dates( WP_Post $post ): array {
+		$dates = get_post_meta( $post->ID, 'kgr_day_tip_dates', TRUE );
+		if ( $dates === '' )
+			return [];
+		return explode( ',', $dates );
+	}
+
+	public static function set_post_dates( WP_Post $post, array $dates ): void {
+		if ( !empty( $dates ) )
+			update_post_meta( $post->ID, 'kgr_day_tip_dates', implode( ',', $dates ) );
+		else
+			delete_post_meta( $post->ID, 'kgr_day_tip_dates' );
 	}
 }
 
