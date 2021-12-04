@@ -3,12 +3,21 @@
 if ( !defined( 'ABSPATH' ) )
 	exit;
 
-add_filter( 'kgr_day_tip_tab_list', function( array $tabs ): array {
-	$tabs['settings'] = esc_html__( 'Settings', 'kgr-day-tip' );
-	return $tabs;
+add_action( 'admin_menu', function(): void {
+	$page_title = esc_html__( 'KGR Tip of the Day', 'kgr-day-tip' );
+	$menu_title = esc_html__( 'KGR Tip of the Day', 'kgr-day-tip' );
+	$capability = 'manage_options';
+	$menu_slug = 'kgr_day_tip';
+	$callback = [ 'KGR_Day_Tip_Settings', 'home_echo' ];
+	add_options_page( $page_title, $menu_title, $capability, $menu_slug, $callback );
 } );
 
-add_action( 'kgr_day_tip_tab_html_settings', [ 'KGR_Day_Tip_Settings', 'home_echo' ] );
+add_action( 'admin_enqueue_scripts', function( string $hook_suffix ): void {
+	if ( $hook_suffix !== 'settings_page_kgr_day_tip' )
+		return;
+	wp_enqueue_style( 'kgr_day_tip_flex', KGRDT::url( 'flex.css' ), [], KGRDT::version() );
+	wp_enqueue_script( 'kgr_day_tip_script', KGRDT::url( 'script.js' ), [ 'jquery' ], KGRDT::version() );
+} );
 
 final class KGR_Day_Tip_Settings {
 
@@ -26,7 +35,7 @@ final class KGR_Day_Tip_Settings {
 			'order' => 'ASC',
 			'hide_empty' => FALSE,
 		] );
-		$html = '<div class="kgr-day-tip-home kgr-day-tip-flex-col kgr-day-tip-root">' . "\n";
+		$html = '<div class="kgr-day-tip-home kgr-day-tip-flex-col kgr-day-tip-root" style="margin: 0 -16px;">' . "\n";
 		$html .= '<div class="kgr-day-tip-flex-row kgr-day-tip-flex-justify-between kgr-day-tip-flex-align-center">' . "\n";
 		$html .= self::refresh_button();
 		$html .= '<span class="kgr-day-tip-spinner kgr-day-tip-leaf spinner" data-kgr-day-tip-spinner-toggle="is-active"></span>' . "\n";
@@ -60,12 +69,24 @@ final class KGR_Day_Tip_Settings {
 		$html .= '</div>' . "\n";
 		$html .= self::form( $cats, $terms, 'cat', __( 'Category', 'kgr-day-tip' ) );
 		$html .= self::form( $tags, $terms, 'tag', __( 'Tag', 'kgr-day-tip' ) );
+		$html .= '<hr class="kgr-day-tip-leaf" />' . "\n";
+		$html .= sprintf( '<h2 class="kgr-day-tip-leaf">%s</h2>', esc_html__( 'Danger Zone', 'kgr-day-tip' ) ) . "\n";
+		$html .= '<div class="kgr-day-tip-flex-row">' . "\n";
+		$html .= self::clear_button();
+		$html .= '</div>' . "\n";
 		$html .= '</div>' . "\n";
 		return $html;
 	}
 
 	public static function home_echo(): void {
-		echo self::home();
+		echo '<div class="wrap">' . "\n";
+		echo sprintf( '<h1>%s</h1>', esc_html__( 'KGR Tip of the Day', 'kgr-day-tip' ) ) . "\n";
+		$term = KGRDTR::get_int( 'term', TRUE );
+		if ( is_null( $term ) )
+			echo self::home();
+		else
+			echo KGR_Day_Tip_Calendar::home( $term );
+		echo '</div>' . "\n";
 	}
 
 	private static function refresh_button(): string {
@@ -112,6 +133,9 @@ final class KGR_Day_Tip_Settings {
 		$actions = [
 			sprintf( '<span class="view"><a href="%s">%s</a></span>', get_term_link( $term ), esc_html__( 'View', 'kgr-day-tip' ) ),
 			sprintf( '<span class="edit"><a href="%s">%s</a></span>', get_edit_term_link( $term->term_id ), esc_html__( 'Edit', 'kgr-day-tip' ) ),
+			sprintf( '<span class="calendar"><a href="%s">%s</a></span>', add_query_arg( [
+				'term' => $term->term_id,
+			], menu_page_url( 'kgr_day_tip', FALSE ) ), esc_html__( 'Calendar', 'kgr-day-tip' ) ),
 			sprintf( '<span class="delete"><a%s>%s</a></span>', KGRDT::attrs( [
 				'href' => add_query_arg( [
 					'action' => 'kgr_day_tip_settings_term_delete',
@@ -159,6 +183,17 @@ final class KGR_Day_Tip_Settings {
 		$html .= '</div>' . "\n";
 		$html .= '</div>' . "\n";
 		return $html;
+	}
+
+	private static function clear_button(): string {
+		return sprintf( '<a%s>%s</a>', KGRDT::attrs( [
+			'href' => add_query_arg( [
+				'action' => 'kgr_day_tip_settings_clear',
+				'nonce' => KGRDT::nonce_create( 'kgr_day_tip_settings_clear' ),
+			], admin_url( 'admin-ajax.php' ) ),
+			'class' => 'kgr-day-tip-link kgr-day-tip-leaf button',
+			'data-kgr-day-tip-confirm' => esc_attr__( 'Clear?', 'kgr-day-tip' ),
+		] ), esc_html__( 'Clear', 'kgr-day-tip' ) ) . "\n";
 	}
 }
 
@@ -217,5 +252,19 @@ add_action( 'wp_ajax_' . 'kgr_day_tip_settings_term_delete', function(): void {
 	KGRDT::nonce_verify( 'kgr_day_tip_settings_term_delete', $term->term_id );
 	unset( $terms[$key] );
 	KGRDT::set_terms( $terms );
+	KGRDT::success( KGR_Day_Tip_Settings::home() );
+} );
+
+add_action( 'wp_ajax_' . 'kgr_day_tip_settings_clear', function(): void {
+	if ( !current_user_can( 'manage_options' ) )
+		exit( 'role' );
+	KGRDT::nonce_verify( 'kgr_day_tip_settings_clear' );
+	KGRDT::set_terms( [] );
+	$posts = get_posts( [
+		'meta_key' => 'kgr_day_tip_dates',
+		'meta_compare' => 'EXISTS',
+	] );
+	foreach ( $posts as $post )
+		KGRDT::set_post_dates( $post, [] );
 	KGRDT::success( KGR_Day_Tip_Settings::home() );
 } );

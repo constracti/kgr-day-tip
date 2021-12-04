@@ -118,60 +118,28 @@ add_action( 'init', function(): void {
         load_plugin_textdomain( 'kgr-day-tip', FALSE, basename( __DIR__ ) . '/languages' );
 } );
 
-// add settings page
-add_action( 'admin_menu', function(): void {
-	$page_title = esc_html__( 'KGR Tip of the Day', 'kgr-day-tip' );
-	$menu_title = esc_html__( 'KGR Tip of the Day', 'kgr-day-tip' );
-	$capability = 'manage_options';
-	$menu_slug = 'kgr-day-tip';
-	add_options_page( $page_title, $menu_title, $capability, $menu_slug, function() {
-		$tab_list = apply_filters( 'kgr_day_tip_tab_list', [] );
-		$tab_curr = KGRDTR::get_word( 'tab', TRUE ) ?? 'settings';
-		if ( !array_key_exists( $tab_curr, $tab_list ) )
-			exit( 'tab' );
-?>
-<div class="wrap">
-	<h1><?= esc_html__( 'KGR Tip of the Day', 'kgr-day-tip' ) ?></h1>
-	<h2 class="nav-tab-wrapper">
-<?php
-		foreach ( $tab_list as $tab_slug => $tab_name ) {
-			$class = [];
-			$class[] = 'nav-tab';
-			if ( $tab_slug === $tab_curr )
-				$class[] = 'nav-tab-active';
-				$class = implode( ' ', $class );
-				$href = menu_page_url( 'kgr-day-tip', FALSE );
-				if ( $tab_slug !== 'settings' )
-					$href = add_query_arg( 'tab', $tab_slug, $href );
-?>
-		<a class="<?= $class ?>" href="<?= $href ?>"><?= esc_html( $tab_name ) ?></a>
-<?php
-		}
-?>
-	</h2>
-<?php
-	do_action( 'kgr_day_tip_tab_html_' . $tab_curr );
-?>
-</div>
-<?php
-	} );
-} );
-
 // add settings link
 add_filter( 'plugin_action_links', function( array $actions, string $plugin_file ): array {
 	if ( $plugin_file !== basename( __DIR__ ) . '/' . basename( __FILE__ ) )
 		return $actions;
 	$actions['settings'] = sprintf( '<a href="%s">%s</a>',
-		menu_page_url( 'kgr-day-tip', FALSE ),
+		menu_page_url( 'kgr_day_tip', FALSE ),
 		esc_html__( 'Settings', 'kgr-day-tip' )
 	);
 	return $actions;
 }, 10, 2 );
 
-// enqueue admin scripts
-add_action( 'admin_enqueue_scripts', function( string $hook_suffix ): void {
-	if ( $hook_suffix !== 'settings_page_kgr-day-tip' )
+add_action( 'pre_get_posts', function( WP_Query $query ): void {
+	if ( is_admin() )
 		return;
-	wp_enqueue_style( 'kgr_day_tip_flex', KGRDT::url( 'flex.css' ), [], KGRDT::version() );
-	wp_enqueue_script( 'kgr_day_tip_script', KGRDT::url( 'script.js' ), [ 'jquery' ], KGRDT::version() );
+	if ( !$query->is_archive() )
+		return;
+	$terms = KGRDT::get_terms();
+	if ( empty( $terms ) )
+		return;
+	if ( !$query->is_category( $terms ) && !$query->is_tag( $terms ) )
+		return;
+	$query->set( 'meta_key', 'kgr_day_tip_dates' );
+	$query->set( 'meta_compare', 'LIKE' );
+	$query->set( 'meta_value', current_time( 'md' ) );
 } );
