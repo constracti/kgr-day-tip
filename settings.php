@@ -129,11 +129,11 @@ final class KGR_Day_Tip_Settings {
 		return $html;
 	}
 
-	private static function table_body_row( $term, string $taxonomy ): string {
+	private static function table_body_row( WP_Term $term, string $taxonomy ): string {
 		$actions = [
-			sprintf( '<span class="view"><a href="%s">%s</a></span>', get_term_link( $term ), esc_html__( 'View', 'kgr-day-tip' ) ),
-			sprintf( '<span class="edit"><a href="%s">%s</a></span>', get_edit_term_link( $term->term_id ), esc_html__( 'Edit', 'kgr-day-tip' ) ),
-			sprintf( '<span class="calendar"><a href="%s">%s</a></span>', add_query_arg( [
+			sprintf( '<a href="%s">%s</a>', get_term_link( $term ), esc_html__( 'View', 'kgr-day-tip' ) ),
+			sprintf( '<a href="%s">%s</a>', get_edit_term_link( $term->term_id ), esc_html__( 'Edit', 'kgr-day-tip' ) ),
+			sprintf( '<a href="%s">%s</a>', add_query_arg( [
 				'term' => $term->term_id,
 			], menu_page_url( 'kgr_day_tip', FALSE ) ), esc_html__( 'Calendar', 'kgr-day-tip' ) ),
 			sprintf( '<span class="delete"><a%s>%s</a></span>', KGRDT::attrs( [
