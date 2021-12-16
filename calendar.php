@@ -12,8 +12,11 @@ final class KGR_Day_Tip_Calendar {
 			return 'term';
 		$posts = get_posts( [
 			'tax_query' => [
-				'taxonomy' => $term->taxonomy,
-				'term' => $term_id,
+				[
+					'taxonomy' => $term->taxonomy,
+					'field' => 'term_id',
+					'terms' => $term->term_id,
+				],
 			],
 			'orderby' => 'date',
 			'order' => 'ASC',
