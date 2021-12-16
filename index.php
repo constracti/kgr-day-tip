@@ -4,7 +4,7 @@
  * Plugin Name: KGR Tip of the Day
  * Plugin URI: https://github.com/constracti/kgr-day-tip
  * Description: Filters posts of specific tags by the current day.
- * Version: 0.1
+ * Version: 0.2
  * Requires at least: ?
  * Requires PHP: 8.0
  * Author: constracti
@@ -139,6 +139,7 @@ add_action( 'pre_get_posts', function( WP_Query $query ): void {
 		return;
 	if ( !$query->is_category( $terms ) && !$query->is_tag( $terms ) )
 		return;
+	$query->set( 'orderby', 'rand' );
 	$query->set( 'meta_key', 'kgr_day_tip_dates' );
 	$query->set( 'meta_compare', 'LIKE' );
 	$query->set( 'meta_value', current_time( 'md' ) );

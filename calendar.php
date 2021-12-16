@@ -19,6 +19,7 @@ final class KGR_Day_Tip_Calendar {
 			'order' => 'ASC',
 			'meta_key' => 'kgr_day_tip_dates',
 			'meta_compare' => 'EXISTS',
+			'nopaging' => TRUE,
 		] );
 		$struct = [];
 		foreach ( $posts as $post ) {
